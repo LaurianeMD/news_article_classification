@@ -76,6 +76,7 @@ def training_step(model, data_loader, loss_fn, optimizer):
 
     return total_loss / len(data_loader.dataset)
 
+#Evaluation
 def evaluation(model, test_dataloader, loss_fn):
     model.eval()
     correct_predictions = 0
@@ -94,3 +95,30 @@ def evaluation(model, test_dataloader, loss_fn):
         losses.append(loss.item())
 
     return correct_predictions.double() / len(test_dataloader.dataset), np.mean(losses)
+
+
+#main
+if __name__ == "__main__":
+    dataset = NewsDataset(csv_file="./inshort_news_data.csv", max_length=100)
+    num_classes = len(dataset.labels_dict)
+
+    train_data, test_data = train_test_split(dataset, test_size=0.2)
+
+    train_dataloader = DataLoader(train_data, batch_size=8, shuffle=True)
+    test_dataloader = DataLoader(test_data, batch_size=8, shuffle=False)
+
+    model = CustomBert(n_classes=num_classes)
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
+
+    num_epochs = 3  
+    for epoch in range(num_epochs):
+        print(f"Epoch {epoch + 1}/{num_epochs}")
+        train_loss = training_step(model, train_dataloader, loss_fn, optimizer)
+        print(f"Train Loss: {train_loss:.4f}")
+
+        val_acc, val_loss = evaluation(model, test_dataloader, loss_fn)
+        print(f"Validation Accuracy: {val_acc:.4f}, Validation Loss: {val_loss:.4f}")
+
+    # Save the model
+    torch.save(model.state_dict(), '/trained_model_.pth')
