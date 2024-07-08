@@ -54,3 +54,43 @@ class CustomBert(nn.Module):
         x = self.bert_pretrained(input_ids=input_ids, attention_mask=attention_mask)
         x = self.classifier(x.pooler_output)
         return x
+
+#Training function
+def training_step(model, data_loader, loss_fn, optimizer):
+    model.train()
+    total_loss = 0
+
+    for data in tqdm(data_loader, total=len(data_loader)):
+        input_ids = data['input_ids']
+        attention_mask = data['attention_mask']
+        labels = data['labels']
+
+        output = model(input_ids=input_ids, attention_mask=attention_mask)
+        loss = loss_fn(output, labels)
+
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        total_loss += loss.item()
+
+    return total_loss / len(data_loader.dataset)
+
+def evaluation(model, test_dataloader, loss_fn):
+    model.eval()
+    correct_predictions = 0
+    losses = []
+
+    for data in tqdm(test_dataloader, total=len(test_dataloader)):
+        input_ids = data['input_ids']
+        attention_mask = data['attention_mask']
+        labels = data['labels']
+
+        output = model(input_ids=input_ids, attention_mask=attention_mask)
+        _, pred = output.max(1)
+        correct_predictions += torch.sum(pred == labels)
+
+        loss = loss_fn(output, labels)
+        losses.append(loss.item())
+
+    return correct_predictions.double() / len(test_dataloader.dataset), np.mean(losses)
